@@ -1,4 +1,4 @@
-package order_pubsub
+package edge_broker
 
 import (
 	"fmt"
@@ -55,7 +55,7 @@ func (b *Broker) Broadcast(msg string, topics []string, attributes map[string]st
 	// broadcast message to all topics
 	for _, topic := range topics {
 		for _, s := range b.topics[topic] {
-			publishTime := time.Now().Format("2006-01-02 15:04:05")
+			publishTime := time.Now().UTC().Format("2006-01-02 15:04:05")
 			m := NewMessage(topic, msg, attributes, publishTime)
 			go (func(s *Subscriber) {
 				s.Signal(m)
@@ -118,7 +118,8 @@ func (b *Broker) Unsubscribe(s *Subscriber, topic string) bool {
 // /////////////////////////
 func (b *Broker) Publish(topic string, msg string, attributes map[string]string) {
 	// publish the message to given topic, so the subscribers who have subscribed the topic will update the message
-	publishTime := time.Now().Format("2006-01-02 15:04:05")
+	publishTime := time.Now().UTC().Format("2006-01-02 15:04:05")
+	//fmt.Printf(publishTime)
 	b.mut.RLock()
 	defer b.mut.RUnlock()
 	bTopics := b.topics[topic]

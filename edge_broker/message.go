@@ -1,4 +1,4 @@
-package order_pubsub
+package edge_broker
 
 import (
 	"sync"

@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"./order_pubsub"
+	"../edge_broker"
 )
 
 var availableCustomers = map[string][]string{
@@ -20,7 +20,7 @@ var availableVendors = map[string][]string{
 	"3C":         {"APPLE", "HP", "BESTBUY"},
 }
 
-func vendorOrderPublisher(broker *order_pubsub.Broker) {
+func vendorOrderPublisher(broker *edge_broker.Broker) {
 	topicVendors := make([]string, 0, len(availableVendors))
 	for k, v := range availableVendors {
 		for _, name := range v {
@@ -45,7 +45,7 @@ func vendorOrderPublisher(broker *order_pubsub.Broker) {
 	}
 }
 
-func customerOrderPublisher(broker *order_pubsub.Broker) {
+func customerOrderPublisher(broker *edge_broker.Broker) {
 	topicCustomers := make([]string, 0, len(availableCustomers))
 	for k, v := range availableCustomers {
 		for _, name := range v {
@@ -72,7 +72,7 @@ func customerOrderPublisher(broker *order_pubsub.Broker) {
 
 func main() {
 	// construct new broker.
-	broker := order_pubsub.NewBroker()
+	broker := edge_broker.NewBroker()
 	// create new subscriber
 	s1 := broker.AddSubscriber()
 	// subscribe BTC and ETH to s1.
