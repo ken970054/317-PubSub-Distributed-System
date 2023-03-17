@@ -182,6 +182,15 @@ func main() {
 	//})()
 
 	//// Scenario 1: user to packaging: ordered -> package: confirmed -> notification: user
+	// Listen for MB to send message MQTT and EB
+	respDataChan := make(chan string)
+	go Mbroker.Publish2MQTT(mqttService)
+	go Mbroker.Publish2EdgeBroker(respDataChan)
+	// MB sub MQTT
+	go (func() {
+		topic := "PACKAGE/NOTIFICATION/ITEM1/REQUEST"
+		mqttService.Subscribe(topic, respDataChan)
+	})()
 	// MB sub EB
 	Ebroker1.Subscribe(Mbroker, "ORDER/ITEM1/RESPONSE")
 	// EB sub MB
@@ -189,21 +198,19 @@ func main() {
 	// client sub EB
 	Ebroker1.Subscribe(s11, "NOTIFICATION/ITEM1/REQUEST")
 
-	attributes := map[string]string{
-		"items":    "item name",
-		"price":    "xxx",
-		"quantity": "zzz",
-	}
-
-	respDataChan := make(chan string)
-	go (func() {
-		topic := "package/notification/item1/request"
-		mqttService.Subscribe(topic, respDataChan)
-	})()
+	//Mbroker.Publish("ORDER/ITEM1/RESPONSE", "Messge from NOTIFICATION TO ORDER from Master broker publish", map[string]string)
 
 	go (func() {
-		sendMessage := "Notify Item1 package failed to ORDER server"
-		Ebroker1.Publish("ORDER/ITEM1/RESPONSE", sendMessage, attributes)
+		attributes := map[string]string{
+			"items":    "item name",
+			"price":    "xxx",
+			"quantity": "zzz",
+		}
+		for i := 0; i < 5; i++ {
+			message := "Notify Item1 package failed to ORDER server"
+			Ebroker1.Publish("ORDER/ITEM1/RESPONSE", message, attributes)
+			time.Sleep(time.Second)
+		}
 	})()
 
 	//// Concurrently listens from s1.
@@ -217,8 +224,6 @@ func main() {
 	go Ebroker1.Listen()
 	go Ebroker2.Listen()
 	go Ebroker3.Listen()
-	go Mbroker.Publish2MQTT(mqttService)
-	go Mbroker.Publish2EdgeBroker(respDataChan)
 
 	for {
 		select {}

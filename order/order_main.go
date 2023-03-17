@@ -171,6 +171,15 @@ func main() {
 	//go customerOrderPublisher(Ebroker2)
 
 	//// Scenario 1: user to packaging: ordered -> package: confirmed -> notification: user
+	// Listen for MB to send message to MQTT and EB
+	respDataChan := make(chan string)
+	go Mbroker.Publish2MQTT(mqttService)
+	go Mbroker.Publish2EdgeBroker(respDataChan)
+	// MB sub MQTT
+	go (func() {
+		topic := "NOTIFICATION/ORDER/ITEM1/RESPONSE"
+		mqttService.Subscribe(topic, respDataChan)
+	})()
 	// MB sub EB
 	Ebroker1.Subscribe(Mbroker, "PACKAGE/ITEM1/REQUEST")
 	// EB sub MB
@@ -179,21 +188,16 @@ func main() {
 	Ebroker1.Subscribe(s11, "NOTIFICATION/ITEM1/RESPONSE")
 	//// publish to s1 and check the message channel
 
-	attributes := map[string]string{
-		"items":    "item name",
-		"price":    "xxx",
-		"quantity": "zzz",
-	}
-
-	respDataChan := make(chan string)
 	go (func() {
-		topic := "NOTIFICATION/ORDER/ITEM1/RESPONSE"
-		mqttService.Subscribe(topic, respDataChan)
-	})()
-
-	go (func() {
-		for {
-			Ebroker1.Publish("PACKAGE/ITEM1/REQUEST", "Item1 order send from ORDER server to PACKAGE server\n", attributes)
+		attributes := map[string]string{
+			"items":    "item name",
+			"price":    "xxx",
+			"quantity": "zzz",
+		}
+		for i := 0; i < 5; i++ {
+			message := "Item1 order send from ORDER server to PACKAGE server"
+			Ebroker1.Publish("PACKAGE/ITEM1/REQUEST", message, attributes)
+			time.Sleep(time.Second)
 		}
 	})()
 
@@ -210,8 +214,6 @@ func main() {
 	go Ebroker1.Listen()
 	go Ebroker2.Listen()
 	go Ebroker3.Listen()
-	go Mbroker.Publish2MQTT(mqttService)
-	go Mbroker.Publish2EdgeBroker(respDataChan)
 
 	// Keep main function working forever
 	for {

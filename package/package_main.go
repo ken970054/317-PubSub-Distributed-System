@@ -183,6 +183,16 @@ func main() {
 	//go Mbroker.Publish("NOTIFICATION/ORDER/CAR/HONDA", "Pub from MB msg", map[string]string{})
 
 	//// Scenario 1: user to packaging: ordered -> package: confirmed -> notification: user
+	// Listen for Master broker to send message to MQTT and Edge broker
+	respDataChan := make(chan string)
+	go Mbroker.Publish2MQTT(mqttService)
+	go Mbroker.Publish2EdgeBroker(respDataChan)
+
+	// MB sub MQTT
+	go (func() {
+		topic := "ORDER/PACKAGE/ITEM1/REQUEST"
+		mqttService.Subscribe(topic, respDataChan)
+	})()
 	// MB sub EB
 	Ebroker1.Subscribe(Mbroker, "NOTIFICATION/ITEM1/REQUEST")
 	// EB sub MB
@@ -191,21 +201,18 @@ func main() {
 	Ebroker1.Subscribe(s11, "ORDER/ITEM1/REQUEST")
 	//// publish to s1
 
-	attributes := map[string]string{
-		"items":     "ITEM1",
-		"price":     "500$",
-		"quantity":  "10",
-		"completed": "FAIL",
-	}
-
-	respDataChan := make(chan string)
 	go (func() {
-		topic := "ORDER/PACKAGE/ITEM1/REQUEST"
-		mqttService.Subscribe(topic, respDataChan)
-	})()
-
-	go (func() {
-		Ebroker1.Publish("NOTIFICATION/ITEM1/REQUEST", "Item1 package failed. Send fail message from PACKAGE server to NOTIFICATION server", attributes)
+		attributes := map[string]string{
+			"items":     "ITEM1",
+			"price":     "500$",
+			"quantity":  "10",
+			"completed": "FAIL",
+		}
+		for i := 0; i < 5; i++ {
+			message := "Item1 package failed. Send fail message from PACKAGE server to NOTIFICATION server"
+			Ebroker1.Publish("NOTIFICATION/ITEM1/REQUEST", message, attributes)
+			time.Sleep(time.Second)
+		}
 	})()
 
 	//// Concurrently listens from s1.
@@ -219,8 +226,6 @@ func main() {
 	go Ebroker1.Listen()
 	go Ebroker2.Listen()
 	go Ebroker3.Listen()
-	go Mbroker.Publish2MQTT(mqttService)
-	go Mbroker.Publish2EdgeBroker(respDataChan)
 
 	for {
 		select {}

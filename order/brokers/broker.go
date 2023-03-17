@@ -123,7 +123,7 @@ func (b *Broker) Subscribe(s interface{}, topic string) {
 	case *MasterBroker:
 		s.AddEdgeTopic(b.id, topic)
 		b.topics[topic]["MB"] = s // only one master broker, so give an unique name "MB" to represent
-		fmt.Printf("Master Broker subscribed for topic: %s\n", topic)
+		fmt.Printf("Master Broker subscribe to Edge Broker %s for topic: %s\n", b.id, topic)
 	}
 }
 
