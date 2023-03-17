@@ -1,4 +1,4 @@
-package edge_broker
+package brokers
 
 import (
 	"sync"

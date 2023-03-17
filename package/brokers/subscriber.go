@@ -1,4 +1,4 @@
-package edge_broker
+package brokers
 
 import (
 	"crypto/rand"
@@ -15,7 +15,7 @@ type Subscriber struct {
 	mutex    sync.RWMutex    // lock
 }
 
-func CreateNewSubscriber() (string, *Subscriber) {
+func CreateNewSubscriber(chanSize int) (string, *Subscriber) {
 	// returns a new subscriber.
 	// create id for subscriber
 	b := make([]byte, 8)
@@ -27,7 +27,7 @@ func CreateNewSubscriber() (string, *Subscriber) {
 	fmt.Printf("Create new subscriber id: %s\n", id)
 	return id, &Subscriber{
 		id:       id,
-		messages: make(chan *Message),
+		messages: make(chan *Message, chanSize),
 		topics:   map[string]bool{},
 		active:   true,
 	}
@@ -71,10 +71,18 @@ func (s *Subscriber) Destruct() {
 
 func (s *Subscriber) Signal(msg *Message) {
 	// Gets the message from the channel
-	s.mutex.RLock() // RLock is incorrect?
+	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	if s.active {
 		s.messages <- msg // does send to channel refer to write action?
+	}
+}
+
+func (s *Subscriber) CheckMessage() {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	if s.active {
+		fmt.Printf("There are %d message in subscriber %s\n", len(s.messages), s.id)
 	}
 }
 
@@ -83,7 +91,6 @@ func (s *Subscriber) Listen() {
 	for {
 		if msg, ok := <-s.messages; ok {
 			fmt.Printf("Subscriber %s, received: %s from topic: %s\n", s.id, msg.GetData(), msg.GetTopic())
-			fmt.Printf("%d number of message in subscriber\n", len(s.messages))
 		}
 	}
 }

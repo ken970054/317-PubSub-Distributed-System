@@ -98,7 +98,7 @@ func main() {
 	s32 := Ebroker2.AddSubscriber(10)
 	s33 := Ebroker2.AddSubscriber(10)
 
-	//time.Sleep(4 * time.Second)
+	//time.Sleep(5 * time.Second)
 	fmt.Printf("\n\n")
 
 	// subscribe: master broker -> edge broker //
@@ -132,10 +132,11 @@ func main() {
 
 	fmt.Printf("\n\n")
 	//time.Sleep(5 * time.Second)
+
 	//go (func() {
 	// sleep for 5 sec, and then subscribe for topic DOT for s2
 	//	time.Sleep(3 * time.Second)
-	//	Ebroker2.Subscribe(s22, "VENDOR/CAR/TOYOTA")
+	//	Ebroker2.Subscribe(s21, "VENDOR/CAR/TOYOTA")
 	//	Ebroker2.Subscribe(Mbroker, "PACKAGE/APPLIANCES/SONY")
 
 	//fmt.Println(Mbroker.GetEdgeTopics(Ebroker1.id))
@@ -145,13 +146,13 @@ func main() {
 	// sleep for 5 sec, and then unsubscribe for topic SOL for s2
 	//	time.Sleep(5 * time.Second)
 
-	//	if Ebroker2.Unsubscribe(s21, "VENDOR/CAR/TOYOTA") {
+	//	if Ebroker2.Unsubscribe(s22, "VENDOR/CAR/TOYOTA") {
 	//		fmt.Printf("Total subscribers for topic TOYOTA is %v\n", Ebroker2.GetSubscribers("TOYOTA"))
 	//	}
-	//	if Ebroker2.Unsubscribe(s22, "VENDOR/CAR/BMW") {
+	//	if Ebroker2.Unsubscribe(s21, "VENDOR/CAR/BMW") {
 	//		fmt.Printf("Total subscribers for topic BMW is %v\n", Ebroker2.GetSubscribers("BMW"))
 	//	}
-	//	if Ebroker1.Unsubscribe(s11, "VENDOR/CAR/BMW") {
+	//	if Ebroker1.Unsubscribe(s12, "VENDOR/CAR/BMW") {
 	//		fmt.Printf("Total subscribers for topic BMW is %v\n", Ebroker1.GetSubscribers("BMW"))
 	//	}
 	//	if Ebroker2.Unsubscribe(Mbroker, "PACKAGE/APPLIANCES/SONY") {
@@ -170,36 +171,44 @@ func main() {
 	//go vendorOrderPublisher(Ebroker1)
 	//go customerOrderPublisher(Ebroker2)
 
+	//// Concurrently publish the messages to Mosquitto
+	//go (func() {
+	//	message, _ := json.Marshal("String to be encoded")
+	//	err := mqttService.Publish("SHIPPING/3C/APPLE/STATUS", message)
+	//	if err != nil {
+	//		fmt.Println(err)
+	//	}
+	//	time.Sleep(time.Second)
+	//})()
+	//go Mbroker.Publish("NOTIFICATION/ORDER/CAR/HONDA", "Pub from MB msg", map[string]string{})
+
 	//// Scenario 1: user to packaging: ordered -> package: confirmed -> notification: user
 	// MB sub EB
-	Ebroker1.Subscribe(Mbroker, "PACKAGE/ITEM1/REQUEST")
+	Ebroker1.Subscribe(Mbroker, "NOTIFICATION/ITEM1/REQUEST")
 	// EB sub MB
-	Mbroker.Subscribe(Ebroker1, "NOTIFICATION/ITEM1/RESPONSE")
+	Mbroker.Subscribe(Ebroker1, "ORDER/ITEM1/REQUEST")
 	// client sub EB
-	Ebroker1.Subscribe(s11, "NOTIFICATION/ITEM1/RESPONSE")
-	//// publish to s1 and check the message channel
+	Ebroker1.Subscribe(s11, "ORDER/ITEM1/REQUEST")
+	//// publish to s1
 
 	attributes := map[string]string{
-		"items":    "item name",
-		"price":    "xxx",
-		"quantity": "zzz",
+		"items":     "ITEM1",
+		"price":     "500$",
+		"quantity":  "10",
+		"completed": "FAIL",
 	}
 
 	respDataChan := make(chan string)
 	go (func() {
-		topic := "NOTIFICATION/ORDER/ITEM1/RESPONSE"
+		topic := "ORDER/PACKAGE/ITEM1/REQUEST"
 		mqttService.Subscribe(topic, respDataChan)
 	})()
 
 	go (func() {
-		for {
-			Ebroker1.Publish("PACKAGE/ITEM1/REQUEST", "Item1 order send from ORDER server to PACKAGE server\n", attributes)
-		}
+		Ebroker1.Publish("NOTIFICATION/ITEM1/REQUEST", "Item1 package failed. Send fail message from PACKAGE server to NOTIFICATION server", attributes)
 	})()
 
 	//// Concurrently listens from s1.
-
-	// Concurrently listens from the published message
 	go s11.Listen()
 	go s12.Listen()
 	go s21.Listen()
@@ -213,7 +222,6 @@ func main() {
 	go Mbroker.Publish2MQTT(mqttService)
 	go Mbroker.Publish2EdgeBroker(respDataChan)
 
-	// Keep main function working forever
 	for {
 		select {}
 	}

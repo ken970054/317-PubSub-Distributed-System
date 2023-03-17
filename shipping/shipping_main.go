@@ -71,11 +71,9 @@ func customerOrderPublisher(broker *brokers.Broker) {
 }
 
 func main() {
-	////////////////////
-	// Initialization //
-	////////////////////
-	fmt.Printf("******Initialization******\n")
-	// Construct Mosquitto and connection with client-side server
+	////////////////////////////////////////////////////////////////
+	// Construct Mosquitto and connection with client-side server //
+	////////////////////////////////////////////////////////////////
 	var mosquitto = "mqtt"
 	var port = 1883
 	mqttService, err := brokers.NewMQTTClient(port, mosquitto, "", "")
@@ -90,86 +88,79 @@ func main() {
 	Ebroker2 := brokers.NewBroker(10)
 	Ebroker3 := brokers.NewBroker(10)
 	// create new subscriber(local client)
-	s11 := Ebroker1.AddSubscriber(10)
-	s12 := Ebroker1.AddSubscriber(10)
-	s21 := Ebroker2.AddSubscriber(10)
-	s22 := Ebroker2.AddSubscriber(10)
-	s31 := Ebroker2.AddSubscriber(10)
-	s32 := Ebroker2.AddSubscriber(10)
-	s33 := Ebroker2.AddSubscriber(10)
-
-	//time.Sleep(6 * time.Second)
-	fmt.Printf("\n\n")
+	s1 := Ebroker1.AddSubscriber(10)
+	s2 := Ebroker2.AddSubscriber(10)
 
 	// subscribe: master broker -> edge broker //
 	/* 1. master broker can subscribe to all edge brokers
 	 * 2. Subscribed topic format: starts from the name of other client-side servers so as to identify where the message will send to
 	 */
+	Ebroker1.Subscribe(Mbroker, "ORDER/CAR/HONDA")
+	Ebroker2.Subscribe(Mbroker, "PACKAGE/3C/APPLE")
+	Ebroker3.Subscribe(Mbroker, "PACKAGE/3C/APPLE")
+	Ebroker3.Subscribe(Mbroker, "ORDER/3C/APPLE")
 
-	//Ebroker1.Subscribe(Mbroker, "NOTIFICATION/CAR/HONDA")
-	//Ebroker2.Subscribe(Mbroker, "PACKAGE/3C/APPLE")
-	//Ebroker3.Subscribe(Mbroker, "PACKAGE/3C/APPLE")
-	//Ebroker3.Subscribe(Mbroker, "NOTIFICATION/3C/APPLE")
-
-	//Ebroker3.Unsubscribe(Mbroker, "PACKAGE/3C/APPLE")
-	//attributeAA := map[string]string{}
-	//Ebroker2.Publish("PACKAGE/CAR/HONDA", "Subscribe MB -> EB", attributeAA)
+	Ebroker3.Unsubscribe(Mbroker, "PACKAGE/3C/APPLE")
+	attributeAA := map[string]string{}
+	Ebroker2.Publish("PACKAGE/CAR/HONDA", "MB -> EB", attributeAA)
 
 	// subscribe: edge broker -> master broker
 	/* 1. all edge brokers can subscribe to master broker
 	 * 2. Subscribed topic format: starts from the name of the other client-side servers to receive and then process where the messages come from and the following content refer to the details of other client-side info
 	 */
+	Mbroker.Subscribe(Ebroker1, "SHIPPING/3C/APPLE/STATUS")
+	Mbroker.Subscribe(Ebroker2, "NOTIFICATION/CUSTOMER/CAR/TOYOTA/STATUS")
+	Mbroker.Subscribe(Ebroker3, "NOTIFICATION/VENDOR/CAR/HONDA/STATUS")
 
-	//Mbroker.Subscribe(Ebroker1, "SHIPPING/3C/APPLE/STATUS")
-	//Mbroker.Subscribe(Ebroker1, "NOTIFICATION/CAR/HONDA")
-	//Mbroker.Subscribe(Ebroker2, "NOTIFICATION/CUSTOMER/CAR/TOYOTA/STATUS")
-	//Mbroker.Subscribe(Ebroker3, "NOTIFICATION/VENDOR/CAR/HONDA/STATUS")
-
+	//Mbroker.Publish("SHIPPING/3C/APPLE/STATUS", "EB -> MB, then send to MQTT", attributeAA)
 	// subscribe: local client -> edge broker //
 	/* 1. one local client only connect to one edge broker, but can subscribe multiple topics
 	 * 2. Subscribed topic format: starts from the name of the current client-side server so as to identify where
 	 */
+	Ebroker1.Subscribe(s1, "PACKAGE/VENDOR/CAR/HONDA/STATUS")
+	Ebroker1.Subscribe(s1, "NOTIFICATION/VENDOR/3C/APPLE/STATUS")
+	Ebroker2.Subscribe(s2, "NOTIFICATION/CUSTOMER/CAR/TOYOTA/STATUS")
+	Ebroker2.Subscribe(s2, "NOTIFICATION/VENDOR/APPLIANCES/LG/STATUS")
 
-	fmt.Printf("\n\n")
-	//time.Sleep(6 * time.Second)
+	Ebroker1.Subscribe(s1, "VENDOR/CAR/HONDA")
 
-	//go (func() {
-	// sleep for 5 sec, and then subscribe for topic DOT for s2
-	//	time.Sleep(3 * time.Second)
-	//	Ebroker2.Subscribe(s21, "VENDOR/CAR/TOYOTA")
-	//	Ebroker2.Subscribe(Mbroker, "PACKAGE/APPLIANCES/SONY")
+	go (func() {
+		// sleep for 5 sec, and then subscribe for topic DOT for s2
+		time.Sleep(3 * time.Second)
+		Ebroker2.Subscribe(s2, "VENDOR/CAR/TOYOTA")
+		Ebroker2.Subscribe(Mbroker, "PACKAGE/APPLIANCES/SONY")
 
-	//fmt.Println(Mbroker.GetEdgeTopics(Ebroker1.id))
-	//})()
+		//fmt.Println(Mbroker.GetEdgeTopics(Ebroker1.id))
+	})()
 
-	//go (func() {
-	// sleep for 5 sec, and then unsubscribe for topic SOL for s2
-	//	time.Sleep(5 * time.Second)
+	go (func() {
+		// sleep for 5 sec, and then unsubscribe for topic SOL for s2
+		time.Sleep(5 * time.Second)
 
-	//	if Ebroker2.Unsubscribe(s22, "VENDOR/CAR/TOYOTA") {
-	//		fmt.Printf("Total subscribers for topic TOYOTA is %v\n", Ebroker2.GetSubscribers("TOYOTA"))
-	//	}
-	//	if Ebroker2.Unsubscribe(s21, "VENDOR/CAR/BMW") {
-	//		fmt.Printf("Total subscribers for topic BMW is %v\n", Ebroker2.GetSubscribers("BMW"))
-	//	}
-	//	if Ebroker1.Unsubscribe(s12, "VENDOR/CAR/BMW") {
-	//		fmt.Printf("Total subscribers for topic BMW is %v\n", Ebroker1.GetSubscribers("BMW"))
-	//	}
-	//	if Ebroker2.Unsubscribe(Mbroker, "PACKAGE/APPLIANCES/SONY") {
-	//		fmt.Printf("Total subscribers for topic PACKAGE/APPLIANCES/SONY is %v\n", Ebroker2.GetSubscribers("PACKAGE/APPLIANCES/SONY"))
-	//	}
-	//})()
+		if Ebroker2.Unsubscribe(s2, "VENDOR/CAR/TOYOTA") {
+			fmt.Printf("Total subscribers for topic TOYOTA is %v\n", Ebroker2.GetSubscribers("TOYOTA"))
+		}
+		if Ebroker2.Unsubscribe(s2, "VENDOR/CAR/BMW") {
+			fmt.Printf("Total subscribers for topic BMW is %v\n", Ebroker2.GetSubscribers("BMW"))
+		}
+		if Ebroker1.Unsubscribe(s1, "VENDOR/CAR/BMW") {
+			fmt.Printf("Total subscribers for topic BMW is %v\n", Ebroker1.GetSubscribers("BMW"))
+		}
+		if Ebroker2.Unsubscribe(Mbroker, "PACKAGE/APPLIANCES/SONY") {
+			fmt.Printf("Total subscribers for topic PACKAGE/APPLIANCES/SONY is %v\n", Ebroker2.GetSubscribers("PACKAGE/APPLIANCES/SONY"))
+		}
+	})()
 
-	//go (func() {
-	// sleep for 5 sec, and then unsubscribe for topic SOL for s2
-	//	time.Sleep(10 * time.Second)
-	//	Ebroker2.RemoveSubscriber(s21)
-	//	fmt.Printf("RemoveSubscriber: Total subscribers for topic APPLE is %v\n", Ebroker2.GetSubscribers("VENDOR/3C/APPLE"))
-	//})()
+	go (func() {
+		// sleep for 5 sec, and then unsubscribe for topic SOL for s2
+		time.Sleep(10 * time.Second)
+		Ebroker2.RemoveSubscriber(s2)
+		fmt.Printf("RemoveSubscriber: Total subscribers for topic APPLE is %v\n", Ebroker2.GetSubscribers("VENDOR/3C/APPLE"))
+	})()
 
 	//// Concurrently publish the values.
-	//go vendorOrderPublisher(Ebroker1)
-	//go customerOrderPublisher(Ebroker2)
+	go vendorOrderPublisher(Ebroker1)
+	go customerOrderPublisher(Ebroker2)
 
 	//// Concurrently publish the messages to Mosquitto
 	//go (func() {
@@ -180,45 +171,37 @@ func main() {
 	//	}
 	//	time.Sleep(time.Second)
 	//})()
+	go Mbroker.Publish("NOTIFICATION/ORDER/CAR/HONDA", "Pub from MB msg", map[string]string{})
+	go Mbroker.Publish2MQTT(mqttService)
 
-	//// Scenario 1: user to packaging: ordered -> package: confirmed -> notification: user
-	// MB sub EB
-	Ebroker1.Subscribe(Mbroker, "ORDER/ITEM1/RESPONSE")
-	// EB sub MB
-	Mbroker.Subscribe(Ebroker1, "NOTIFICATION/ITEM1/REQUEST")
-	// client sub EB
-	Ebroker1.Subscribe(s11, "NOTIFICATION/ITEM1/REQUEST")
+	respDataChan := make(chan []byte)
+	go func() {
+		mqttService.Subscribe("ORDER/PACKAGE/CAR/HONDA", respDataChan)
+		if respData, ok := <-respDataChan; ok {
+			fmt.Printf("Got response %v \n", string(respData))
+		}
+	}()
 
+	//// Concurrently listens from s1.
+	go s1.Listen()
+
+	//// publish to s1 and chech the message channel
 	attributes := map[string]string{
 		"items":    "item name",
 		"price":    "xxx",
 		"quantity": "zzz",
 	}
+	//Ebroker1.Publish("VENDOR/CAR/HONDA", "For test1", attributes)
+	//Ebroker1.Publish("VENDOR/CAR/HONDA", "For test2", attributes)
+	Ebroker1.Publish("ORDER/CAR/HONDA", "From NOTIFICATION to ORDER", attributes)
 
-	respDataChan := make(chan string)
-	go (func() {
-		topic := "package/notification/item1/request"
-		mqttService.Subscribe(topic, respDataChan)
-	})()
-
-	go (func() {
-		sendMessage := "Notify Item1 package failed to ORDER server"
-		Ebroker1.Publish("ORDER/ITEM1/RESPONSE", sendMessage, attributes)
-	})()
-
-	//// Concurrently listens from s1.
-	go s11.Listen()
-	go s12.Listen()
-	go s21.Listen()
-	go s22.Listen()
-	go s31.Listen()
-	go s32.Listen()
-	go s33.Listen()
-	go Ebroker1.Listen()
+	// Concurrently listens from s2.
+	go s2.Listen()
 	go Ebroker2.Listen()
-	go Ebroker3.Listen()
-	go Mbroker.Publish2MQTT(mqttService)
-	go Mbroker.Publish2EdgeBroker(respDataChan)
+	go Ebroker1.Listen()
+	// to prevent terminate
+	//fmt.Scanln()
+	//fmt.Println("Done!")
 
 	for {
 		select {}
